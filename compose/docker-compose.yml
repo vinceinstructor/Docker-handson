@@ -1,0 +1,70 @@
+version: '3.8'
+services:
+  memcached:
+    image: memcached:latest
+    container_name: memcached
+    ports:
+      - "11211:11211"
+    volumes:
+      - memcached_data:/var/lib/docker/volumes/memcached_data/_data
+    networks:
+      - backend_network
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "8084:80"
+    volumes:
+      - nginx_config:/var/lib/docker/volumes/nginx_config/_data
+    depends_on:
+      - web_server
+    networks:
+      - frontend_network
+      - backend_network
+  web_server:
+    container_name: web_app
+    image: ubuntu:latest
+    depends_on:
+      - db
+      - memcached
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=mysecretpassword
+      - DB_NAME=mydatabase
+      - MEMCACHED_HOST=memcached
+      - MEMCACHED_PORT=11211
+    networks:
+      - backend_network
+  db:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      - POSTGRES_DB=mydatabase
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=mysecretpassword
+    volumes:
+      - postgres_data:/var/lib/docker/volumes/postgres_data/_data
+    networks:
+      - backend_network
+  haproxy:
+    image: haproxy:latest
+    container_name: haproxy
+    ports:
+      - "8085:80"
+    volumes:
+      - haproxy_config:/var/lib/docker/volumes/haproxy_config/_data
+    depends_on:
+      - web_server
+    networks:
+      - frontend_network
+      - backend_network
+networks:
+  frontend_network:
+  backend_network:
+volumes:
+  memcached_data:
+  nginx_config:
+  postgres_data:
+  haproxy_config:
